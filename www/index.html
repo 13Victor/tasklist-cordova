@@ -42,38 +42,73 @@
         #accordion {
             width: 100%;
         }
+
+        .task-buttons {
+            float: right;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        input, textarea {
+            width: 100%;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
     <div id="container">
-        <h1>TaskList Accordion Example</h1>
+        <h1>TaskList</h1>
         <button id="button">Añadir Tarea</button>
         <div id="accordion"></div>
     </div>
 
-    <div id="dialog" title="Añadir Nueva Tarea">
-        <label for="taskName">Nombre de la tarea:</label>
-        <input type="text" id="taskName" />
+    <!-- Diálogo para añadir nueva tarea -->
+    <div id="dialog-add" title="Añadir Nueva Tarea">
+        <label for="newTaskName">Nombre de la tarea:</label>
+        <input type="text" id="newTaskName" />
+        
+        <label for="newTaskDescription">Notas adicionales:</label>
+        <textarea id="newTaskDescription" rows="4"></textarea>
+    </div>
+
+    <!-- Diálogo para editar tarea existente -->
+    <div id="dialog-edit" title="Editar Tarea">
+        <label for="editTaskName">Nombre de la tarea:</label>
+        <input type="text" id="editTaskName" />
+        
+        <label for="editTaskDescription">Notas adicionales:</label>
+        <textarea id="editTaskDescription" rows="4"></textarea>
+    </div>
+
+    <!-- Diálogo de confirmación para eliminar -->
+    <div id="dialog-confirm" title="Eliminar Tarea">
+        <p>¿Estás seguro de que quieres eliminar esta tarea?</p>
     </div>
 
     <script>
         $(document).ready(function() {
             $("#accordion").accordion();
             $("#button").button();
-            $("#dialog").dialog({
+
+            // Diálogo para añadir nueva tarea
+            $("#dialog-add").dialog({
                 autoOpen: false,
                 width: 400,
                 buttons: [
                     {
                         text: "Añadir",
                         click: function() {
-                            var taskName = $("#taskName").val();
+                            var taskName = $("#newTaskName").val();
+                            var taskDescription = $("#newTaskDescription").val();
                             if (taskName) {
-                                var newHeader = $("<h3></h3>").text(taskName);
-                                var newContent = $("<div></div>").html("<p>Descripción de \"" + taskName + "\".</p>");
-                                $("#accordion").append(newHeader).append(newContent);
-                                $("#accordion").accordion("refresh");
-                                $("#taskName").val(""); // Limpiar el campo de entrada
+                                addTask(taskName, taskDescription);
+                                $("#newTaskName").val("");
+                                $("#newTaskDescription").val("");
                                 $(this).dialog("close");
                             }
                         }
@@ -81,16 +116,97 @@
                     {
                         text: "Cancelar",
                         click: function() {
-                            $("#taskName").val(""); // Limpiar el campo de entrada
+                            $("#newTaskName").val("");
+                            $("#newTaskDescription").val("");
                             $(this).dialog("close");
                         }
                     }
                 ]
             });
 
-            $("#button").click(function() {
-                $("#dialog").dialog("open");
+            // Diálogo para editar tarea existente
+            $("#dialog-edit").dialog({
+                autoOpen: false,
+                width: 400,
+                buttons: [
+                    {
+                        text: "Guardar",
+                        click: function() {
+                            var editedTaskName = $("#editTaskName").val();
+                            var editedTaskDescription = $("#editTaskDescription").val();
+                            var taskHeader = $(this).data('taskHeader');
+                            var taskContent = $(this).data('taskContent');
+
+                            taskHeader.find(".task-title").text(editedTaskName); // Actualiza el texto del título sin afectar botones
+                            taskContent.html("<p>" + editedTaskDescription + "</p>"); // Actualiza contenido
+                            
+                            $("#accordion").accordion("refresh");
+                            $(this).dialog("close");
+                        }
+                    },
+                    {
+                        text: "Cancelar",
+                        click: function() {
+                            $(this).dialog("close");
+                        }
+                    }
+                ]
             });
+
+            // Diálogo de confirmación para eliminar tarea
+            $("#dialog-confirm").dialog({
+                autoOpen: false,
+                resizable: false,
+                height: "auto",
+                width: 400,
+                modal: true,
+                buttons: {
+                    "Eliminar": function() {
+                        $(this).data('caller').closest("h3").next("div").remove(); // Eliminar contenido
+                        $(this).data('caller').closest("h3").remove(); // Eliminar encabezado
+                        $("#accordion").accordion("refresh");
+                        $(this).dialog("close");
+                    },
+                    "Cancelar": function() {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+
+            $("#button").click(function() {
+                $("#dialog-add").dialog("open");
+            });
+
+            function addTask(name, description) {
+                var taskHeader = $("<h3></h3>");
+                var taskTitle = $("<span class='task-title'></span>").text(name);
+                var taskContent = $("<div></div>").html("<p>" + description + "</p>");
+
+                // Crear botones de editar y eliminar
+                var editButton = $("<button class='task-buttons'>Editar</button>");
+                var deleteButton = $("<button class='task-buttons'>Eliminar</button>");
+
+                // Función para eliminar tarea
+                deleteButton.click(function(e) {
+                    $("#dialog-confirm").data('caller', $(e.target)).dialog("open");
+                });
+
+                // Función para editar tarea
+                editButton.click(function() {
+                    $("#editTaskName").val(taskTitle.text()); // Solo el texto de la tarea
+                    $("#editTaskDescription").val(taskContent.find("p").text());
+
+                    $("#dialog-edit").data('taskHeader', taskHeader);
+                    $("#dialog-edit").data('taskContent', taskContent);
+
+                    $("#dialog-edit").dialog("open");
+                });
+
+                // Añadir título y botones al encabezado de la tarea y adjuntarlos al DOM
+                taskHeader.append(taskTitle).append(deleteButton).append(editButton);
+                $("#accordion").append(taskHeader).append(taskContent);
+                $("#accordion").accordion("refresh");
+            }
         });
     </script>
 </body>
