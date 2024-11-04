@@ -207,7 +207,145 @@
                 $("#accordion").append(taskHeader).append(taskContent);
                 $("#accordion").accordion("refresh");
             }
+
+            $("#accordion").accordion();
+            $("#button").button();
+
+            // Cargar tareas desde localStorage al iniciar
+            loadTasksFromLocalStorage();
+
+            // Diálogo para añadir nueva tarea
+            $("#dialog-add").dialog({
+                autoOpen: false,
+                width: 400,
+                buttons: [
+                    {
+                        text: "Añadir",
+                        click: function() {
+                            var taskName = $("#newTaskName").val();
+                            var taskDescription = $("#newTaskDescription").val();
+                            if (taskName) {
+                                addTask(taskName, taskDescription);
+                                saveTasksToLocalStorage(); // Guardar en localStorage
+                                $("#newTaskName").val("");
+                                $("#newTaskDescription").val("");
+                                $(this).dialog("close");
+                            }
+                        }
+                    },
+                    {
+                        text: "Cancelar",
+                        click: function() {
+                            $("#newTaskName").val("");
+                            $("#newTaskDescription").val("");
+                            $(this).dialog("close");
+                        }
+                    }
+                ]
+            });
+
+            // Diálogo para editar tarea existente
+            $("#dialog-edit").dialog({
+                autoOpen: false,
+                width: 400,
+                buttons: [
+                    {
+                        text: "Guardar",
+                        click: function() {
+                            var editedTaskName = $("#editTaskName").val();
+                            var editedTaskDescription = $("#editTaskDescription").val();
+                            var taskHeader = $(this).data('taskHeader');
+                            var taskContent = $(this).data('taskContent');
+
+                            taskHeader.find(".task-title").text(editedTaskName);
+                            taskContent.html("<p>" + editedTaskDescription + "</p>");
+
+                            saveTasksToLocalStorage(); // Guardar cambios en localStorage
+                            $("#accordion").accordion("refresh");
+                            $(this).dialog("close");
+                        }
+                    },
+                    {
+                        text: "Cancelar",
+                        click: function() {
+                            $(this).dialog("close");
+                        }
+                    }
+                ]
+            });
+
+            // Diálogo de confirmación para eliminar tarea
+            $("#dialog-confirm").dialog({
+                autoOpen: false,
+                resizable: false,
+                height: "auto",
+                width: 400,
+                modal: true,
+                buttons: {
+                    "Eliminar": function() {
+                        $(this).data('caller').closest("h3").next("div").remove(); // Eliminar contenido
+                        $(this).data('caller').closest("h3").remove(); // Eliminar encabezado
+                        saveTasksToLocalStorage(); // Guardar cambios en localStorage
+                        $("#accordion").accordion("refresh");
+                        $(this).dialog("close");
+                    },
+                    "Cancelar": function() {
+                        $(this).dialog("close");
+                    }
+                }
+            });
+
+            $("#button").click(function() {
+                $("#dialog-add").dialog("open");
+            });
+
+            function addTask(name, description) {
+                var taskHeader = $("<h3></h3>");
+                var taskTitle = $("<span class='task-title'></span>").text(name);
+                var taskContent = $("<div></div>").html("<p>" + description + "</p>");
+
+                var editButton = $("<button class='task-buttons'>Editar</button>");
+                var deleteButton = $("<button class='task-buttons'>Eliminar</button>");
+
+                deleteButton.click(function(e) {
+                    $("#dialog-confirm").data('caller', $(e.target)).dialog("open");
+                });
+
+                editButton.click(function() {
+                    $("#editTaskName").val(taskTitle.text());
+                    $("#editTaskDescription").val(taskContent.find("p").text());
+
+                    $("#dialog-edit").data('taskHeader', taskHeader);
+                    $("#dialog-edit").data('taskContent', taskContent);
+
+                    $("#dialog-edit").dialog("open");
+                });
+
+                taskHeader.append(taskTitle).append(deleteButton).append(editButton);
+                $("#accordion").append(taskHeader).append(taskContent);
+                $("#accordion").accordion("refresh");
+            }
+
+            function saveTasksToLocalStorage() {
+                var tasks = [];
+                $("#accordion h3").each(function() {
+                    var taskName = $(this).find(".task-title").text();
+                    var taskDescription = $(this).next("div").find("p").text();
+                    tasks.push({ name: taskName, description: taskDescription });
+                });
+                localStorage.setItem("taskList", JSON.stringify(tasks));
+            }
+
+            function loadTasksFromLocalStorage() {
+                var tasks = JSON.parse(localStorage.getItem("taskList"));
+                if (tasks) {
+                    tasks.forEach(function(task) {
+                        addTask(task.name, task.description);
+                    });
+                }
+            }
         });
+
     </script>
 </body>
 </html>
